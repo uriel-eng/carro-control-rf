@@ -133,6 +133,7 @@ void RF_Config(){
     HAL_GPIO_Init(GPIOA,&GPIO_InitStruct);
 
 }
+
 uint8_t RF_SetPacket(){
     uint8_t packet=0;
     if(forward.currentState==GPIO_PIN_SET)
@@ -186,5 +187,6 @@ void RF_SendData(){
         }
         
     }
+    HAL_GPIO_WritePin(RF_PORT,RF_PIN,GPIO_PIN_RESET);
     
 }

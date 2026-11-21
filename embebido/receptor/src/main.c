@@ -204,15 +204,17 @@ Si motor es 0 no se mueve, si es 2 avanza y si es 1 atras
 */
 void Driver_Move(uint8_t payload){
     
-    if(payload&0b00001000)
-        HAL_GPIO_WritePin(DRIVER_PORT,FORWARD,GPIO_PIN_SET);
-    if(payload&0b00000100)
-        HAL_GPIO_WritePin(DRIVER_PORT,BACKWARD,GPIO_PIN_SET);
-    if(payload&0b00000010)
-        HAL_GPIO_WritePin(DRIVER_PORT,RIGHT,GPIO_PIN_SET);
-    if(payload&0b00000001)
-        HAL_GPIO_WritePin(DRIVER_PORT,LEFT,GPIO_PIN_SET);
-    
+    HAL_GPIO_WritePin(DRIVER_PORT, FORWARD,
+        (payload & 0b00001000) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+
+    HAL_GPIO_WritePin(DRIVER_PORT, BACKWARD,
+        (payload & 0b00000100) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+
+    HAL_GPIO_WritePin(DRIVER_PORT, RIGHT,
+        (payload & 0b00000010) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+
+    HAL_GPIO_WritePin(DRIVER_PORT, LEFT,
+        (payload & 0b00000001) ? GPIO_PIN_SET : GPIO_PIN_RESET);    
     
 }
 
