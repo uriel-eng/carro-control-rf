@@ -2,30 +2,40 @@
 
 #define RF_PORT GPIOA
 #define RF_PIN  GPIO_PIN_4
-#define TIME_OUT 20
 
 #define DRIVER_PORT GPIOA
-#define FORWARD GPIO_PIN_3
-#define BACKWARD GPIO_PIN_2
-#define RIGHT GPIO_PIN_1
-#define LEFT GPIO_PIN_0
+#define FORWARD GPIO_PIN_1
+#define BACKWARD GPIO_PIN_0
+#define SERVO_STEERING GPIO_PIN_2
 
 void SystemClock_Config();
+void Delay_Init();
+void Delay_us(uint32_t);
 void SystemLed_Config();
 void RF_Config();
 void RF_ReadData();
 void Driver_Config();
 void Driver_Move(uint8_t);
 void Driver_Stop();
+void Servo_Move(uint8_t);
+
+const int TIME_OUT = 20;
 
 int steering=90;
 int motor=0;
 
 int main(){
-    
+ 
+    SystemClock_Config();
+    Delay_Init();
+    SystemLed_Config();
+    Driver_Config();
+    Driver_Stop();
+    RF_Config();
+       
     while(1){
         
-        
+        RF_ReadData();
         
     }
     
@@ -56,6 +66,23 @@ void SystemClock_Config(){
     
     HAL_RCC_ClockConfig(&RCC_ClkInitStruct,FLASH_LATENCY_2);
     
+}
+
+void Delay_Init(){
+    
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+    DWT->CYCCNT = 0;
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+
+}
+
+void Delay_us(uint32_t us){
+    
+    uint32_t start = DWT->CYCCNT;
+    uint32_t ticks = us * (SystemCoreClock / 1000000);
+    
+    while ((DWT->CYCCNT - start) < ticks);
+
 }
 
 void SystemLed_Config(){
@@ -191,8 +218,7 @@ void Driver_Config(){
     GPIO_InitTypeDef GPIO_InitStruct={0};
     GPIO_InitStruct.Pin=GPIO_PIN_0 |
                         GPIO_PIN_1 |
-                        GPIO_PIN_2 |
-                        GPIO_PIN_3;
+                        GPIO_PIN_2;
     GPIO_InitStruct.Mode=GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Speed=GPIO_SPEED_FREQ_LOW;
     HAL_GPIO_Init(GPIOA,&GPIO_InitStruct);
@@ -204,25 +230,57 @@ Si motor es 0 no se mueve, si es 2 avanza y si es 1 atras
 */
 void Driver_Move(uint8_t payload){
     
+    if ((payload & 0b00000001 
+        && payload & 0b00000010)
+        || (payload & 0b00001000
+        && payload & 0b00000100)){
+       
+         Driver_Stop();
+         return;
+        
+    }
+    
     HAL_GPIO_WritePin(DRIVER_PORT, FORWARD,
         (payload & 0b00001000) ? GPIO_PIN_SET : GPIO_PIN_RESET);
 
     HAL_GPIO_WritePin(DRIVER_PORT, BACKWARD,
         (payload & 0b00000100) ? GPIO_PIN_SET : GPIO_PIN_RESET);
 
-    HAL_GPIO_WritePin(DRIVER_PORT, RIGHT,
-        (payload & 0b00000010) ? GPIO_PIN_SET : GPIO_PIN_RESET);
-
-    HAL_GPIO_WritePin(DRIVER_PORT, LEFT,
-        (payload & 0b00000001) ? GPIO_PIN_SET : GPIO_PIN_RESET);    
+    if (payload & 0b00000010)
+        Servo_Move(180);
     
+    else if(payload & 0b00000001)
+        Servo_Move(0);        
+
 }
+
+void Servo_Move(uint8_t angle){
+    
+    switch(angle){
+        
+        case 0:
+            HAL_GPIO_WritePin(DRIVER_PORT,SERVO_STEERING,GPIO_PIN_SET);
+            Delay_us(1000);
+            break;
+        case 90:
+            HAL_GPIO_WritePin(DRIVER_PORT,SERVO_STEERING,GPIO_PIN_SET);
+            HAL_Delay(1500);
+            break;
+        case 180:
+            HAL_GPIO_WritePin(DRIVER_PORT,SERVO_STEERING,GPIO_PIN_SET);
+            HAL_Delay(2000);
+            break;
+            
+    }
+    
+    HAL_GPIO_WritePin(DRIVER_PORT,SERVO_STEERING,GPIO_PIN_RESET);
+    
+} 
 
 void Driver_Stop(){
     
     HAL_GPIO_WritePin(DRIVER_PORT,FORWARD,GPIO_PIN_RESET);
     HAL_GPIO_WritePin(DRIVER_PORT,BACKWARD,GPIO_PIN_RESET);
-    HAL_GPIO_WritePin(DRIVER_PORT,RIGHT,GPIO_PIN_RESET);
-    HAL_GPIO_WritePin(DRIVER_PORT,LEFT,GPIO_PIN_RESET);
+    Servo_Move(90);
     
 }
